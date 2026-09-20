@@ -559,6 +559,6 @@ The notebooks contain the fuller methodological discussion and source links used
 
 # Disclaimer
 
-This repository is an educational quantitative-finance research project. It is intended to study event measurement, counterfactual modelling, execution costs, uncertainty and constrained position sizing.
+This repository is an educational quantitative-finance research project.
 
 It is **not investment advice, a live signal, or an ex-ante trading recommendation**.
