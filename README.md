@@ -4,7 +4,7 @@ This repository contains three connected quantitative-finance notebooks. Togethe
 
 The overall research pipeline is:
 
-$$
+```math
 \text{Event study}
 \rightarrow
 \text{counterfactual return}
@@ -16,7 +16,7 @@ $$
 \text{execution costs and liquidity}
 \rightarrow
 \text{constrained position } q^*
-$$
+```
 
 The project is educational and retrospective. It is **not a live trading recommendation**.
 
@@ -33,7 +33,7 @@ finance_projects/
 └── ibkr-trading-design.ipynb
 ```
 
-When the notebooks are executed, they may also use or create local folders such as:
+When executed, the notebooks may also use or create local folders such as:
 
 ```text
 data/
@@ -43,13 +43,13 @@ data/
 output/
 ```
 
-The event-study notebook creates its market-data cache and working directories from the repository root. The integrated trading notebook expects a validated event-study handoff under:
+The integrated trading notebook expects a validated event-study handoff under:
 
 ```text
 data/derived/ibkr_event_handoff/
 ```
 
-containing:
+with files such as:
 
 ```text
 manifest.json
@@ -59,7 +59,7 @@ model_audit.parquet
 market_data_handoff.parquet
 ```
 
-The trading-design notebook intentionally stops if this handoff is missing or if its hashes do not match the frozen event-study source.
+The trading-design notebook is designed to stop if the required handoff is missing or inconsistent with the frozen event-study source.
 
 ---
 
@@ -67,45 +67,42 @@ The trading-design notebook intentionally stops if this handoff is missing or if
 
 ## Purpose
 
-This notebook develops a **general, model-agnostic framework for translating a predictive return distribution into a signed optimal position**.
+This notebook develops a **general, model-agnostic framework for translating a return distribution into a signed optimal position**.
 
-It does not assume that returns come from any specific forecasting model. The input can be a bootstrap distribution, Bayesian posterior, event-study distribution, or any other set of predictive return draws.
+It does not assume that returns come from any specific forecasting model. The input can be a bootstrap distribution, Bayesian posterior, event-study distribution, or another set of predictive return draws.
 
-The decision variable is a dollar position:
+The decision variable is a dollar position `q`, where:
 
-$$
-q \in \mathbb{R},
-$$
-
-where:
-
-- $q>0$ means long;
-- $q<0$ means short;
-- $q=0$ means no trade.
+- `q > 0` means long;
+- `q < 0` means short;
+- `q = 0` means no trade.
 
 The notebook separates three types of inputs:
 
 1. **Model inputs** — the predictive return distribution;
-2. **Market inputs** — transaction costs, impact and liquidity;
+2. **Market inputs** — transaction costs, market impact and liquidity;
 3. **Investor-policy inputs** — wealth, risk aversion, loss limits and participation limits.
 
 ## Main methodology
 
 Implementation costs are represented as:
 
-$$
+```math
 C(q)
 =
 c|q|
 +
-\frac{1}{2}\kappa q^2,
-$$
+\frac{1}{2}\kappa q^2
+```
 
-where $c|q|$ captures proportional costs and $\frac12\kappa q^2$ captures nonlinear market impact.
+where:
 
-Using a local CRRA certainty-equivalent approximation, the unconstrained signed position balances expected return against costs, impact and risk:
+- `c|q|` captures proportional trading costs;
+- `0.5 κ q²` captures nonlinear market impact.
 
-$$
+Using a local CRRA certainty-equivalent approximation, the signed position is chosen by balancing expected return against costs, market impact and risk:
+
+```math
 J(q)
 =
 q\mu
@@ -117,25 +114,25 @@ c|q|
 \kappa
 +
 \frac{\rho}{W}\sigma^2
-\right)q^2.
-$$
+\right)q^2
+```
 
 The notebook then imposes:
 
-- an Expected-Shortfall loss limit;
+- an Expected Shortfall loss limit;
 - a market-capacity constraint;
-- long / short / no-trade comparison;
+- explicit long / short / no-trade comparison;
 - uncertainty propagation across plausible input states.
 
-The final object is therefore not necessarily one perfectly known number, but potentially a distribution:
+The final object can therefore be a distribution of optimal positions rather than a single point estimate:
 
-$$
-q^{*(1)},\ldots,q^{*(B)}.
-$$
+```math
+q^{*(1)},\ldots,q^{*(B)}
+```
 
 ## Role in the repository
 
-This notebook is the **theoretical trade-sizing framework** used later by the IBKR application. It can also be used independently with another return model or another event.
+This notebook is the **general theoretical trade-sizing framework** used later by the IBKR application. It can also be used independently with another event or return model.
 
 ---
 
@@ -149,11 +146,11 @@ The central question is:
 
 > How much of IBKR's return around the index migration can be explained by common movements in economically related stocks, and how much remains as an event-associated abnormal return?
 
-Because IBKR simultaneously entered the S&P 500 and left the S&P MidCap 400, the event is treated as a **net index migration**, not a pure S&P 500 inclusion.
+Because IBKR simultaneously entered the S&P 500 and left the S&P MidCap 400, the event is treated as a **net index migration**, not as a pure S&P 500 inclusion.
 
 ## Counterfactual model
 
-The notebook builds a target-free donor universe of 11 brokerage, exchange and market-infrastructure stocks:
+The notebook builds a donor universe of 11 brokerage, exchange and market-infrastructure stocks:
 
 ```text
 SCHW, HOOD, LPLA, RJF, CME, CBOE, NDAQ, ICE, MKTX, TW, VIRT
@@ -163,7 +160,7 @@ SPY is used as a benchmark rather than as a PCA donor.
 
 The donor returns are standardized and compressed using PCA. IBKR is then regressed on the retained principal components:
 
-$$
+```math
 r_t^{IBKR}
 =
 \alpha
@@ -172,30 +169,36 @@ r_t^{IBKR}
 +\cdots+
 \beta_K PC_{K,t}
 +
-\varepsilon_t.
-$$
+\varepsilon_t
+```
 
-The counterfactual return is the fitted value $\widehat r_t^{IBKR}$, and the abnormal return is:
+The counterfactual return is the fitted value:
 
-$$
+```math
+\widehat r_t^{IBKR}
+```
+
+and the abnormal return is:
+
+```math
 AR_t
 =
 r_t^{IBKR}
 -
-\widehat r_t^{IBKR}.
-$$
+\widehat r_t^{IBKR}
+```
 
 ## Model selection and validation
 
-The number of components is selected using **chronological walk-forward validation**, not an arbitrary explained-variance threshold.
+The number of components is selected using **chronological walk-forward validation**, rather than an arbitrary explained-variance threshold.
 
-The development sample compares $K=1,\ldots,11$. A moving-block-bootstrap version of the **one-standard-error rule** then selects the simplest model whose RMSE is sufficiently close to the empirical minimum.
+The development sample compares `K = 1, ..., 11`. A moving-block-bootstrap version of the **one-standard-error rule** selects the simplest model whose RMSE is sufficiently close to the empirical minimum.
 
 The final specification uses:
 
-$$
+```math
 K=2
-$$
+```
 
 for both close-to-close and open-to-close models.
 
@@ -210,32 +213,32 @@ On the untouched 63-session holdout:
 |---|---:|---:|
 | RMSE | 171.4 bps | 122.1 bps |
 | MAE | 116.5 bps | 87.0 bps |
-| Out-of-sample $R^2$ | 0.712 | 0.789 |
+| Out-of-sample R² | 0.712 | 0.789 |
 | Actual-predicted correlation | 0.894 | 0.932 |
 
 ## Main empirical result
 
-The most relevant window for a trade entered after the public announcement is:
+The primary tradeable window is:
 
-$$
-\text{26 August 2025 open}
-\rightarrow
-\text{27 August 2025 close}.
-$$
+```text
+26 August 2025 open
+→
+27 August 2025 close
+```
 
-For this **primary tradeable window**, the estimated abnormal return is approximately:
+For this window, the estimated abnormal simple return is approximately:
 
-$$
-\boxed{-5.24\%}.
-$$
+```math
+-5.24\%
+```
 
 The bootstrap median event effect is approximately **−5.93%**, with a pointwise 95% interval of approximately:
 
-$$
-[-10.24\%,-1.95\%].
-$$
+```math
+[-10.24\%,-1.95\%]
+```
 
-However, inference is limited by the small holdout sample. The primary-tradeable empirical placebo p-value is approximately **0.032**, but after correcting across the four related event windows with Holm's procedure, the adjusted p-value is approximately **0.125**.
+Inference is limited by the small holdout sample. The primary-tradeable empirical placebo p-value is approximately **0.032**, but after Holm correction across the four related event windows, the adjusted p-value is approximately **0.125**.
 
 The result is therefore economically meaningful and stable across several robustness checks, but it is **not statistically significant at the family-wide 5% level**.
 
@@ -256,7 +259,7 @@ Removing any one donor leaves the primary-tradeable estimate roughly between **�
 
 ## Interpretation
 
-The PCA model is an **ex-post counterfactual**, not an ex-ante forecast and not a causal identification strategy.
+The PCA/PCR model is an **ex-post counterfactual**, not an ex-ante forecast and not a causal identification strategy.
 
 The residual can contain:
 
@@ -267,7 +270,7 @@ The residual can contain:
 - omitted common factors;
 - model error.
 
-The notebook therefore describes the result as an **event-associated abnormal return**, rather than claiming that passive funds caused the full observed residual.
+The notebook therefore interprets the result as an **event-associated abnormal return**, rather than claiming that passive funds caused the full observed residual.
 
 ---
 
@@ -275,11 +278,11 @@ The notebook therefore describes the result as an **event-associated abnormal re
 
 ## Purpose
 
-This notebook connects the previous two projects.
+This notebook connects the event-study project with the general trade-design framework.
 
 It asks:
 
-> Conditional on the event-return distribution estimated ex post, what position would the generic trade-design framework imply after accounting for hedge construction, costs, liquidity, risk and investor constraints?
+> Conditional on the event-return distribution estimated ex post, what position would the trade-design framework imply after accounting for hedge construction, trading costs, liquidity, risk and investor constraints?
 
 The notebook does **not** claim that the −5.24% event residual was known before the event.
 
@@ -289,45 +292,45 @@ Instead, it is a retrospective exercise showing how a measured statistical oppor
 
 The event-study model produces:
 
-$$
+```math
 AR
 =
 r_{IBKR}
 -
-\widehat r_{IBKR}.
-$$
+\widehat r_{IBKR}
+```
 
 The frozen PCR counterfactual is algebraically rewritten in the original donor-stock space:
 
-$$
+```math
 \widehat r_{IBKR}
 =
-a+w^\top r_{donors}.
-$$
+a+w^\top r_{donors}
+```
 
-Because the regression intercept $a$ is not directly tradable, the notebook defines the approximate tradable residual as:
+Because the regression intercept `a` is not directly tradable, the notebook defines the approximate tradable residual as:
 
-$$
+```math
 R^{res}
 =
 r_{IBKR}
 -
-w^\top r_{donors}.
-$$
+w^\top r_{donors}
+```
 
 Therefore:
 
-$$
+```math
 R^{res}
 =
-AR+a.
-$$
+AR+a
+```
 
 The primary-tradeable statistical abnormal return is approximately **−5.24%**, while the corresponding approximate tradable residual is approximately:
 
-$$
-\boxed{-5.12\%}.
-$$
+```math
+-5.12\%
+```
 
 The notebook derives separate donor exposures for the open-to-close and close-to-close legs and explicitly models the required hedge rebalance between them.
 
@@ -343,22 +346,22 @@ The implementation model includes:
 - a local quadratic impact approximation;
 - per-security, per-execution capacity limits.
 
-For every security $s$ and execution event $e$, capacity is checked as:
+For every security `s` and execution event `e`, capacity is checked as:
 
-$$
+```math
 |q||m_{s,e}|
 \le
-\phi V_s.
-$$
+\phi V_s
+```
 
 Hence:
 
-$$
+```math
 q_{capacity}
 =
 \min_{s,e}
-\frac{\phi V_s}{|m_{s,e}|}.
-$$
+\frac{\phi V_s}{|m_{s,e}|}
+```
 
 This makes capacity a **multi-leg weakest-link constraint**, rather than a limit based only on IBKR liquidity.
 
@@ -366,9 +369,9 @@ This makes capacity a **multi-leg weakest-link constraint**, rather than a limit
 
 The final application uses the following policy choices:
 
-- portfolio wealth: **$50 million**;
+- portfolio wealth: **\$50 million**;
 - CRRA risk aversion: **4**;
-- Expected-Shortfall loss budget: **$500,000**;
+- Expected Shortfall loss budget: **\$500,000**;
 - ES tail probability: **5%**;
 - maximum participation per execution: **5% of dollar volume**.
 
@@ -378,28 +381,26 @@ These are investor-policy assumptions, not estimated market parameters.
 
 Under the central calibration, the optimizer selects approximately:
 
-$$
-\boxed{
+```math
 q^*
 =
 -\$13.42\text{ million}
-}
-$$
+```
 
 of IBKR target notional, equivalent to roughly **209,000 IBKR shares short**, together with the dynamically rebalanced donor hedge.
 
 At this position:
 
-- expected net P&L is approximately **$540k**;
-- modelled P&L volatility is approximately **$249k**;
-- 5% Expected Shortfall is approximately **−$65.8k**.
+- expected net P&L is approximately **\$540k**;
+- modelled P&L volatility is approximately **\$249k**;
+- 5% Expected Shortfall is approximately **−\$65.8k**.
 
 The ES loss budget is therefore not close to binding. The main constraint is execution capacity.
 
 Across 1,000 uncertainty iterations:
 
-- median $q^*$: approximately **−$13.42m**;
-- 5th–95th percentile range: approximately **−$15.76m to −$12.80m**;
+- median `q*`: approximately **−\$13.42m**;
+- 5th–95th percentile range: approximately **−\$15.76m to −\$12.80m**;
 - short direction selected: **100%**;
 - capacity binding: **99.1%**;
 - unconstrained risk optimum binding: **0.5%**;
@@ -413,19 +414,19 @@ The narrow position range should not be interpreted as precise knowledge of the 
 
 | Notebook | Main question | Main output |
 |---|---|---|
-| `optimal-trade-design(1).ipynb` | Given a return distribution, costs and constraints, how large should a signed position be? | Generic optimizer for $q^*$ |
+| `optimal-trade-design(1).ipynb` | Given a return distribution, costs and constraints, how large should a signed position be? | Generic optimizer for `q*` |
 | `ibkr-pca-event-study.ipynb` | How unusual was IBKR's return around its S&P 400 → S&P 500 migration? | Ex-post abnormal-return distribution |
 | `ibkr-trading-design.ipynb` | How can that residual be hedged and translated into a constrained theoretical trade? | Tradable residual, execution model and IBKR target position |
 
 A useful way to read the repository is:
 
-$$
-\boxed{\text{Event study}}
+```math
+\text{Event study}
 \rightarrow
-\boxed{\text{Trade-design theory}}
+\text{Trade-design theory}
 \rightarrow
-\boxed{\text{Integrated IBKR application}}.
-$$
+\text{Integrated IBKR application}
+```
 
 ---
 
@@ -504,9 +505,9 @@ This notebook requires the validated event-study handoff in:
 data/derived/ibkr_event_handoff/
 ```
 
-It verifies both artifact checksums and the hash of the frozen source notebook before using the event-study outputs.
+It verifies the required artifacts and the frozen source notebook before using the event-study outputs.
 
-If the handoff files are absent, the notebook will stop rather than silently reconstructing or approximating the frozen model.
+If the handoff files are absent, the notebook stops rather than silently reconstructing or approximating the frozen model.
 
 ---
 
@@ -520,7 +521,7 @@ The research design attempts to avoid information leakage by:
 - excluding the possible-anticipation period from model fitting;
 - selecting model complexity before observing the event;
 - freezing the PCA/PCR model before calculating event abnormal returns;
-- validating downstream handoff artifacts with hashes.
+- validating downstream handoff artifacts.
 
 Random seeds are set inside the notebooks for reproducible bootstrap and Monte Carlo calculations.
 
@@ -535,7 +536,7 @@ The main limitations of the repository are deliberate and important:
 3. **Statistical power is limited.** The final holdout contains 63 sessions, and the two-session event uncertainty is supported by only 62 overlapping historical residual blocks.
 4. **Daily data are coarse for index implementation.** They cannot isolate closing-auction imbalances or investor identities.
 5. **Execution inputs are approximate.** Spread, commissions, market impact and borrow rely on empirical proxies or literature-based calibrations.
-6. **Liquidity estimation is based on a short clean post-split window.** The integrated trade-design notebook uses 46 pre-event sessions.
+6. **Liquidity estimation uses a short clean post-split window.** The integrated trade-design notebook uses 46 pre-event sessions.
 7. **The hedge is a return-space approximation.** PCR is linear in log returns, while an actual fixed-notional self-financing portfolio earns simple returns.
 
 For these reasons, the final position should be interpreted as a **retrospective educational calibration**, not as evidence that the trade could have been identified or implemented in real time with the same information.
@@ -552,7 +553,7 @@ The notebooks draw on several strands of the literature, including:
 - Corwin, S. A. and Schultz, P. (2012), *A Simple Way to Estimate Bid-Ask Spreads from Daily High and Low Prices*.
 - Market-impact literature on square-root impact, including Moro et al. and Zarinelli et al.
 
-The notebooks contain the full methodological discussion and links used for each application.
+The notebooks contain the fuller methodological discussion and source links used in the analysis.
 
 ---
 
