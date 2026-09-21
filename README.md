@@ -25,7 +25,7 @@ The project is educational and retrospective. It is **not a live trading recomme
 ## Repository structure
 
 ```text
-finance_projects/
+ibkr_pca_analysis/
 │
 ├── README.md
 ├── optimal-trade-design(1).ipynb
